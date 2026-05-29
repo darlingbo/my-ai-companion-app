@@ -169,7 +169,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
     private fun startMovementLoop() {
         val mover = object : Runnable {
             override fun run() {
-                if (!::bubbleView.isAttachedSafely()) return
+                if (!bubbleView.isAttachedToWindow) return
                 // gentle autonomous up/down drift
                 if (movingUp) { params.y -= 4 } else { params.y += 4 }
                 if (params.y < 120) movingUp = false
@@ -182,8 +182,6 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         }
         handler.postDelayed(mover, 1000)
     }
-
-    private fun View.isAttachedSafely(): Boolean = this.isAttachedToWindow
 
     // ── Talking & asking questions on a timer ──
     private fun scheduleTalking() {
