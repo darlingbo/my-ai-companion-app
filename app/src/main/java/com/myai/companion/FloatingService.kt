@@ -111,7 +111,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         windowManager.addView(bubbleView, params)
         setupTouch()
 
-        bubbleView.findViewById<TextView>(R.id.bubbleFace).text = "🤖"
+        bubbleView.findViewById<TextView>(R.id.bubbleFace).text = bubbleEmoji()
         showSpeech(greeting())
     }
 
@@ -154,7 +154,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         face.text = "👂"
         showSpeech("Hi! Opening our chat…")
         speak("Hi! Let's chat.")
-        handler.postDelayed({ face.text = "🤖" }, 1500)
+        handler.postDelayed({ face.text = bubbleEmoji() }, 1500)
         // Open the chat app (your Streamlit web app) — change this URL if you want
         try {
             val url = prefs.getString("chat_url",
@@ -227,6 +227,10 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
             "Did you eat today$n?",
             "What's your goal for today$n?"
         ).random()
+    }
+
+    private fun bubbleEmoji(): String {
+        return prefs.getString("bubble_emoji", "🤖") ?: "🤖"
     }
 
     private fun greeting(): String {
