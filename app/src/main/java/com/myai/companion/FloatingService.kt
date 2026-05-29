@@ -61,6 +61,10 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         showBubble()
         startMovementLoop()
         scheduleTalking()
+        try {
+            registerReceiver(batteryReceiver,
+                android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (_: Exception) {}
     }
 
     private fun startAsForeground() {
@@ -114,6 +118,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         val faceView = bubbleView.findViewById<TextView>(R.id.bubbleFace)
         faceView.text = bubbleEmoji()
         startPulse(faceView)
+        startOrbit(bubbleView.findViewById(R.id.orbitRing))
         showSpeech(greeting())
     }
 
@@ -151,13 +156,25 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
+    private var lastTapTime = 0L
+
     private fun onBubbleTap() {
-        val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
-        face.text = "👂"
-        showSpeech("Hi! Opening our chat…")
-        speak("Hi! Let's chat.")
-        handler.postDelayed({ face.text = bubbleEmoji() }, 1500)
-        // Open the chat app (your Streamlit web app) — change this URL if you want
+        val now = System.currentTimeMillis()
+        if (now - lastTapTime < 400) {
+            // Double tap → open full web chat
+            openWebChat()
+            lastTapTime = 0
+            return
+        }
+        lastTapTime = now
+        // Single tap → voice conversation (listen + reply)
+        handler.postDelayed({
+            if (System.currentTimeMillis() - lastTapTime >= 380) startListening()
+        }, 420)
+    }
+
+    private fun openWebChat() {
+        showSpeech("Opening full chat…")
         try {
             val url = prefs.getString("chat_url",
                 "https://my-ai-assistant-ltwrdkacjgc59epbteifua.streamlit.app")
@@ -165,6 +182,72 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(i)
         } catch (_: Exception) {}
+    }
+
+    // ── Voice conversation ──
+    private var recognizer: android.speech.SpeechRecognizer? = null
+
+    private fun startListening() {
+        val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) {
+            showSpeech("Voice not available — tap twice to open chat.")
+            return
+        }
+        face.text = "👂"
+        showSpeech("I'm listening…")
+        try {
+            recognizer?.destroy()
+            recognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this)
+            val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            }
+            recognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
+                override fun onResults(results: Bundle?) {
+                    val list = results?.getStringArrayList(
+                        android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                    val said = list?.firstOrNull() ?: ""
+                    face.text = bubbleEmoji()
+                    if (said.isNotEmpty()) respondTo(said) else showSpeech("I didn't catch that.")
+                }
+                override fun onError(error: Int) {
+                    face.text = bubbleEmoji()
+                    showSpeech("Hmm, I didn't hear you. Tap to try again!")
+                }
+                override fun onReadyForSpeech(p0: Bundle?) {}
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(p0: Float) {}
+                override fun onBufferReceived(p0: ByteArray?) {}
+                override fun onEndOfSpeech() { face.text = "🧠" }
+                override fun onPartialResults(p0: Bundle?) {}
+                override fun onEvent(p0: Int, p1: Bundle?) {}
+            })
+            recognizer?.startListening(intent)
+        } catch (e: Exception) {
+            face.text = bubbleEmoji()
+            showSpeech("Mic error — check microphone permission.")
+        }
+    }
+
+    private fun respondTo(said: String) {
+        val key = prefs.getString("groq_key", "") ?: ""
+        val userName = prefs.getString("user_name", "") ?: ""
+        val aiName = prefs.getString("ai_name", "Aura") ?: "Aura"
+        if (!isOnline() || key.isEmpty()) {
+            val reply = LocalBrain.respond(said, userName, aiName)
+            showSpeech(reply); speak(reply); return
+        }
+        showSpeech("…")
+        GroqClient.ask(
+            key,
+            "You are $aiName, a warm AI companion on ${if (userName.isNotEmpty()) "$userName's" else "the user's"} phone. Reply in 1-2 short sentences, friendly and natural.",
+            said
+        ) { reply ->
+            val text = reply?.trim()?.ifEmpty { LocalBrain.respond(said, userName, aiName) }
+                ?: LocalBrain.respond(said, userName, aiName)
+            handler.post { showSpeech(text); speak(text) }
+        }
     }
 
     // ── Continuous up/down floating movement ──
@@ -248,6 +331,15 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         scaleUp.start()
     }
 
+    // Rotating orbit ring — like a hologram spinning in space
+    private fun startOrbit(view: View) {
+        val spin = android.animation.ObjectAnimator.ofFloat(view, View.ROTATION, 0f, 360f)
+        spin.duration = 6000
+        spin.repeatCount = android.animation.ValueAnimator.INFINITE
+        spin.interpolator = android.view.animation.LinearInterpolator()
+        spin.start()
+    }
+
     private fun greeting(): String {
         val name = prefs.getString("user_name", "") ?: ""
         return LocalBrain.greeting(name)
@@ -281,8 +373,29 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
+        try { recognizer?.destroy() } catch (_: Exception) {}
+        try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { windowManager.removeView(bubbleView) } catch (_: Exception) {}
         try { tts.shutdown() } catch (_: Exception) {}
         try { wakeLock?.release() } catch (_: Exception) {}
+    }
+
+    // ── Battery awareness — comments when battery gets low ──
+    private var lowBatteryWarned = false
+    private val batteryReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val level = intent?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+            val scale = intent?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100) ?: 100
+            if (level < 0) return
+            val pct = (level * 100 / scale)
+            val name = prefs.getString("user_name", "") ?: ""
+            val n = if (name.isNotEmpty()) ", $name" else ""
+            if (pct <= 15 && !lowBatteryWarned) {
+                lowBatteryWarned = true
+                val msg = "Battery low ($pct%)$n — better charge soon! 🔋"
+                showSpeech(msg); speak(msg)
+            }
+            if (pct > 30) lowBatteryWarned = false
+        }
     }
 }

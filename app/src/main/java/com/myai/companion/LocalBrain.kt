@@ -56,6 +56,33 @@ object LocalBrain {
             ).random()
         }
 
+        // Simple math (e.g. "what is 5 plus 3")
+        val mathAnswer = trySimpleMath(t)
+        if (mathAnswer != null) return "That's $mathAnswer! 🔢"
+
+        // Love / friendship
+        if (t.contains("love you") || t.contains("i like you")) {
+            return "Aww, I care about you too, $name! 💙 I'll always be here."
+        }
+        if (t.contains("alone") || t.contains("lonely")) {
+            return "You're not alone, $name. I'm right here on your screen, always. 🤗"
+        }
+
+        // Weather (offline can't check, be honest)
+        if (t.contains("weather")) {
+            return "I can't check weather offline, $name — connect to internet and I'll find out!"
+        }
+
+        // Compliments to AI
+        if (t.contains("good job") || t.contains("well done") || t.contains("smart") || t.contains("clever")) {
+            return "Thank you, $name! That means a lot. 😊"
+        }
+
+        // Sleep
+        if (t.contains("sleep") || t.contains("bed")) {
+            return "Rest well, $name. A good sleep makes tomorrow brighter. 🌙"
+        }
+
         // Thanks
         if (t.contains("thank")) return "Anytime, $name! That's what I'm here for. 🤗"
 
@@ -125,6 +152,22 @@ object LocalBrain {
             else -> "Good evening"
         }
         return "$g$name! Systems online. ⚡"
+    }
+
+    // Tiny offline calculator: "5 plus 3", "10 times 4", "20 minus 7", "8 divided by 2"
+    private fun trySimpleMath(t: String): String? {
+        val m = Regex("(\\d+)\\s*(plus|\\+|minus|-|times|x|\\*|divided by|/)\\s*(\\d+)").find(t) ?: return null
+        val a = m.groupValues[1].toDoubleOrNull() ?: return null
+        val b = m.groupValues[3].toDoubleOrNull() ?: return null
+        val op = m.groupValues[2]
+        val r = when {
+            op.contains("plus") || op == "+" -> a + b
+            op.contains("minus") || op == "-" -> a - b
+            op.contains("times") || op == "x" || op == "*" -> a * b
+            op.contains("divided") || op == "/" -> if (b != 0.0) a / b else return "undefined (can't divide by zero)"
+            else -> return null
+        }
+        return if (r == r.toLong().toDouble()) r.toLong().toString() else r.toString()
     }
 
     private fun motivation(): String = listOf(

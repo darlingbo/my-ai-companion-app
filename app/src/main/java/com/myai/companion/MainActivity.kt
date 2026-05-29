@@ -10,7 +10,10 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
@@ -68,10 +71,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Please allow 'Display over other apps' first", Toast.LENGTH_LONG).show()
                 requestOverlay(); return@setOnClickListener
             }
-            if (keyInput.text.toString().trim().isEmpty()) {
-                Toast.makeText(this, "Add your Groq API key first", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
+                requestMicIfNeeded()
             saveAll(nameInput, aiNameInput, keyInput)
             ContextCompat.startForegroundService(this, Intent(this, FloatingService::class.java))
             Toast.makeText(this, "Your AI is now alive! Minimize this app.", Toast.LENGTH_LONG).show()
@@ -84,6 +84,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateStatus(status)
+    }
+
+    private fun requestMicIfNeeded() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 7)
+        }
     }
 
     private fun refreshEmojiSelection() {
