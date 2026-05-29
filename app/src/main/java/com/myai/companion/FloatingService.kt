@@ -325,6 +325,18 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
         val userName = prefs.getString("user_name", "") ?: ""
         val aiName = prefs.getString("ai_name", "Aura") ?: "Aura"
 
+        // ── Voice ACTIONS first (alarms, reminders, call, navigate, open apps...) ──
+        try {
+            val action = ActionEngine.handle(this, said)
+            if (action != null) {
+                showSpeech(action.spoken); speak(action.spoken)
+                action.intent?.let { i ->
+                    try { startActivity(i) } catch (_: Exception) {}
+                }
+                return
+            }
+        } catch (_: Exception) {}
+
         // ── Local memory (works offline) ──
         val lower = said.lowercase().trim()
         if (lower.startsWith("remember ")) {
