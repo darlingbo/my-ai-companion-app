@@ -24,7 +24,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.random.Random
 
-class FloatingService : Service(), TextToSpeech.OnInitListener {
+class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware.SensorEventListener {
 
     private lateinit var windowManager: WindowManager
     private lateinit var bubbleView: View
@@ -65,6 +65,68 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
             registerReceiver(batteryReceiver,
                 android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         } catch (_: Exception) {}
+        registerSensors()
+    }
+
+    // ── Sensor awareness: shake & flip ──
+    private var sensorManager: android.hardware.SensorManager? = null
+    private var lastShake = 0L
+    private var lastShakeReact = 0L
+    private var isSleeping = false
+
+    private fun registerSensors() {
+        try {
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+            val accel = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+            sensorManager?.registerListener(this, accel,
+                android.hardware.SensorManager.SENSOR_DELAY_NORMAL)
+        } catch (_: Exception) {}
+    }
+
+    override fun onSensorChanged(event: android.hardware.SensorEvent?) {
+        if (event == null || event.sensor.type != android.hardware.Sensor.TYPE_ACCELEROMETER) return
+        val x = event.values[0]; val y = event.values[1]; val z = event.values[2]
+
+        // Flip face-down → sleep; face-up → wake
+        if (z < -8.5f && !isSleeping) {
+            isSleeping = true
+            val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+            face.text = "😴"
+            showSpeech("Going to sleep… 😴 zzz")
+        } else if (z > 8.5f && isSleeping) {
+            isSleeping = false
+            val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+            face.text = bubbleEmoji()
+            showSpeech("I'm awake! 😊")
+        }
+
+        // Shake detection
+        val g = Math.sqrt((x*x + y*y + z*z).toDouble()).toFloat()
+        val now = System.currentTimeMillis()
+        if (g > 22f) {
+            if (now - lastShake < 600 && now - lastShakeReact > 3000) {
+                lastShakeReact = now
+                onShaken()
+            }
+            lastShake = now
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+
+    private fun onShaken() {
+        val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+        face.text = "😵"
+        val msgs = listOf("Whoa! Stop shaking me! 😵", "Wheee! That's dizzy! 🌀", "Haha, easy there! 😆")
+        val m = msgs.random()
+        showSpeech(m); speak(m)
+        try {
+            val v = getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                v.vibrate(android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        } catch (_: Exception) {}
+        handler.postDelayed({ face.text = bubbleEmoji() }, 2500)
+        EmotionEngine.recordInteraction(prefs, 1)
     }
 
     private fun startAsForeground() {
@@ -181,10 +243,24 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
             return
         }
         lastTapTime = now
+        // Bond grows with every interaction
+        val newLevel = EmotionEngine.recordInteraction(prefs)
+        if (newLevel != null) celebrateLevelUp(newLevel)
         // Single tap → voice conversation (listen + reply)
         handler.postDelayed({
             if (System.currentTimeMillis() - lastTapTime >= 380) startListening()
         }, 420)
+    }
+
+    private fun celebrateLevelUp(level: Int) {
+        val title = EmotionEngine.bondTitle(level)
+        val msg = "💖 Bond Level $level! We're now $title!"
+        showSpeech(msg); speak("Our bond grew! We are now $title!")
+        try {
+            val v = getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                v.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0,100,80,100), -1))
+        } catch (_: Exception) {}
     }
 
     private fun openWebChat() {
@@ -326,6 +402,15 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         val userName = prefs.getString("user_name", "") ?: ""
         val aiName = prefs.getString("ai_name", "Aura") ?: "Aura"
 
+        if (isSleeping) return  // don't talk while sleeping (face down)
+
+        // 40% of the time, express a feeling (mood-aware) instead of a question
+        val moodTalk = (0..9).random() < 4
+        if (moodTalk) {
+            val m = EmotionEngine.moodMessage(prefs, userName)
+            showSpeech(m); speak(m); return
+        }
+
         // OFFLINE or no key → use the built-in local brain
         if (!isOnline() || key.isEmpty()) {
             val q = LocalBrain.checkInQuestion(userName)
@@ -414,6 +499,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
         try { recognizer?.destroy() } catch (_: Exception) {}
+        try { sensorManager?.unregisterListener(this) } catch (_: Exception) {}
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { windowManager.removeView(bubbleView) } catch (_: Exception) {}
         try { tts.shutdown() } catch (_: Exception) {}
@@ -436,6 +522,19 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
                 showSpeech(msg); speak(msg)
             }
             if (pct > 30) lowBatteryWarned = false
+
+            // Charging companionship
+            val status = intent?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
+            val charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == android.os.BatteryManager.BATTERY_STATUS_FULL
+            if (charging && !wasCharging) {
+                wasCharging = true
+                val msg = "Recharging together$n! 🔌⚡"
+                showSpeech(msg)
+            } else if (!charging && wasCharging) {
+                wasCharging = false
+            }
         }
     }
+    private var wasCharging = false
 }

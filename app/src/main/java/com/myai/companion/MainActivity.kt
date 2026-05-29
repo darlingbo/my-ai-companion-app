@@ -84,6 +84,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateStatus(status)
+        updateBond()
+    }
+
+    private fun updateBond() {
+        val level = EmotionEngine.level(prefs)
+        val title = EmotionEngine.bondTitle(level)
+        val mood = EmotionEngine.mood(prefs)
+        findViewById<TextView>(R.id.bondText)?.text = "💖 Bond Level $level — $title"
+        val moodName = mood.name.lowercase().replaceFirstChar { it.uppercase() }
+        findViewById<TextView>(R.id.moodText)?.text = "Mood: ${EmotionEngine.moodEmoji(mood)} $moodName"
     }
 
     private fun requestMicIfNeeded() {
@@ -114,6 +124,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateStatus(findViewById(R.id.statusText))
+        updateBond()
     }
 
     private fun updateStatus(status: TextView) {
