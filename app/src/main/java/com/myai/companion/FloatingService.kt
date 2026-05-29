@@ -168,7 +168,6 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
             try { windowManager.updateViewLayout(bubbleView, params) } catch (_: Exception) {}
         }
         anim.start()
-        tx = targetX.toFloat(); ty = params.y.toFloat()
     }
 
     private var lastTapTime = 0L
