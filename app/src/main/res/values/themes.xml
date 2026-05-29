@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AICompanion" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#10A37F</item>
+        <item name="android:windowBackground">#212121</item>
+    </style>
+</resources>
