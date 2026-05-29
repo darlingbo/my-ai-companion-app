@@ -130,16 +130,22 @@ object LocalBrain {
     fun checkInQuestion(userName: String): String {
         val name = if (userName.isNotEmpty()) ", $userName" else ""
         return listOf(
+            // questions
             "How are you feeling$name?",
             "Have you had water today$name? 💧",
             "What are you working on$name?",
-            "Remember to take a break$name! 😊",
             "Did you eat something$name?",
             "What's your goal for today$name?",
-            "Don't forget to stretch$name!",
-            "You're doing great$name, keep going! 💪",
+            "What made you smile today$name?",
+            // affirmations
+            "You are capable of amazing things$name. ✨",
+            "Believe in yourself$name — I do! 💙",
+            "Every small step counts$name. Keep going! 🚀",
+            "You matter$name, and you're doing your best.",
             "Take a deep breath$name. You've got this.",
-            "What made you smile today$name?"
+            "Remember to take a break$name! 😊",
+            "You're stronger than you think$name. 💪",
+            "Proud of you$name, just for showing up today. 🌟"
         ).random()
     }
 

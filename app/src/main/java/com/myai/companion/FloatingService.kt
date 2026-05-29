@@ -148,12 +148,27 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) onBubbleTap()
+                    if (!isDragging) onBubbleTap() else snapToEdge()
                     true
                 }
                 else -> false
             }
         }
+    }
+
+    // Snap the bubble to the nearest left/right edge after dragging
+    private fun snapToEdge() {
+        val viewW = bubbleView.width.takeIf { it > 0 } ?: 220
+        val targetX = if (params.x + viewW / 2 < screenW / 2) 0 else screenW - viewW
+        val anim = android.animation.ValueAnimator.ofInt(params.x, targetX)
+        anim.duration = 350
+        anim.interpolator = android.view.animation.OvershootInterpolator(1.2f)
+        anim.addUpdateListener { a ->
+            params.x = a.animatedValue as Int
+            try { windowManager.updateViewLayout(bubbleView, params) } catch (_: Exception) {}
+        }
+        anim.start()
+        tx = targetX.toFloat(); ty = params.y.toFloat()
     }
 
     private var lastTapTime = 0L
@@ -234,14 +249,40 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         val key = prefs.getString("groq_key", "") ?: ""
         val userName = prefs.getString("user_name", "") ?: ""
         val aiName = prefs.getString("ai_name", "Aura") ?: "Aura"
+
+        // ── Local memory (works offline) ──
+        val lower = said.lowercase().trim()
+        if (lower.startsWith("remember ")) {
+            val fact = said.substring(8).trim()
+            val mem = prefs.getStringSet("memories", HashSet())!!.toMutableSet()
+            mem.add(fact)
+            prefs.edit().putStringSet("memories", mem).apply()
+            val r = "Got it — I'll remember that. 🧠"
+            showSpeech(r); speak(r); return
+        }
+        if (lower.contains("what do you remember") || lower.contains("what did i tell you")
+            || lower.contains("remember anything")) {
+            val mem = prefs.getStringSet("memories", HashSet())!!.toList()
+            val r = if (mem.isEmpty()) "You haven't told me anything to remember yet."
+                    else "I remember: " + mem.takeLast(5).joinToString("; ")
+            showSpeech(r); speak(r); return
+        }
+        if (lower.contains("forget everything") || lower.contains("clear memory")) {
+            prefs.edit().remove("memories").apply()
+            val r = "Done — I've cleared my memory."
+            showSpeech(r); speak(r); return
+        }
+
         if (!isOnline() || key.isEmpty()) {
             val reply = LocalBrain.respond(said, userName, aiName)
             showSpeech(reply); speak(reply); return
         }
         showSpeech("…")
+        val mems = prefs.getStringSet("memories", HashSet())!!.toList()
+        val memText = if (mems.isNotEmpty()) " Things you remember about them: ${mems.joinToString("; ")}." else ""
         GroqClient.ask(
             key,
-            "You are $aiName, a warm AI companion on ${if (userName.isNotEmpty()) "$userName's" else "the user's"} phone. Reply in 1-2 short sentences, friendly and natural.",
+            "You are $aiName, a warm AI companion on ${if (userName.isNotEmpty()) "$userName's" else "the user's"} phone. Reply in 1-2 short sentences, friendly and natural.$memText",
             said
         ) { reply ->
             val text = reply?.trim()?.ifEmpty { LocalBrain.respond(said, userName, aiName) }
