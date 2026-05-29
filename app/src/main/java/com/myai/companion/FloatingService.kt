@@ -111,7 +111,9 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         windowManager.addView(bubbleView, params)
         setupTouch()
 
-        bubbleView.findViewById<TextView>(R.id.bubbleFace).text = bubbleEmoji()
+        val faceView = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+        faceView.text = bubbleEmoji()
+        startPulse(faceView)
         showSpeech(greeting())
     }
 
@@ -200,45 +202,55 @@ class FloatingService : Service(), TextToSpeech.OnInitListener {
         val key = prefs.getString("groq_key", "") ?: ""
         val userName = prefs.getString("user_name", "") ?: ""
         val aiName = prefs.getString("ai_name", "Aura") ?: "Aura"
-        if (key.isEmpty()) {
-            val q = fallbackQuestion(userName)
+
+        // OFFLINE or no key → use the built-in local brain
+        if (!isOnline() || key.isEmpty()) {
+            val q = LocalBrain.checkInQuestion(userName)
             showSpeech(q); speak(q); return
         }
-        // Ask Groq for a fresh, caring question
+        // ONLINE → ask the smarter cloud AI
         GroqClient.ask(
             key,
             "You are $aiName, a caring AI companion living on ${if (userName.isNotEmpty()) "$userName's" else "the user's"} phone. " +
                     "Say ONE short, warm sentence to check in on them or ask a question. Max 12 words. No quotes.",
             "Say something to me now."
         ) { reply ->
-            val text = reply?.trim()?.ifEmpty { fallbackQuestion(userName) } ?: fallbackQuestion(userName)
+            val text = reply?.trim()?.ifEmpty { LocalBrain.checkInQuestion(userName) }
+                ?: LocalBrain.checkInQuestion(userName)
             handler.post { showSpeech(text); speak(text) }
         }
     }
 
-    private fun fallbackQuestion(name: String): String {
-        val n = if (name.isNotEmpty()) ", $name" else ""
-        return listOf(
-            "How are you feeling$n?",
-            "Have you had water today$n?",
-            "What are you working on$n?",
-            "Don't forget to smile$n! 😊",
-            "Need any help$n?",
-            "Did you eat today$n?",
-            "What's your goal for today$n?"
-        ).random()
+    private fun isOnline(): Boolean {
+        return try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val net = cm.activeNetwork ?: return false
+            val caps = cm.getNetworkCapabilities(net) ?: return false
+            caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } catch (_: Exception) { false }
     }
 
     private fun bubbleEmoji(): String {
         return prefs.getString("bubble_emoji", "🤖") ?: "🤖"
     }
 
+    // Futuristic pulsing glow — orb breathes like a living hologram
+    private fun startPulse(view: View) {
+        val scaleUp = android.animation.ObjectAnimator.ofPropertyValuesHolder(
+            view,
+            android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.12f),
+            android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.12f)
+        )
+        scaleUp.duration = 1400
+        scaleUp.repeatCount = android.animation.ValueAnimator.INFINITE
+        scaleUp.repeatMode = android.animation.ValueAnimator.REVERSE
+        scaleUp.interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+        scaleUp.start()
+    }
+
     private fun greeting(): String {
         val name = prefs.getString("user_name", "") ?: ""
-        val n = if (name.isNotEmpty()) ", $name" else ""
-        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        val g = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" }
-        return "$g$n! I'm here 🤖"
+        return LocalBrain.greeting(name)
     }
 
     private fun showSpeech(text: String) {

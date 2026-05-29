@@ -9,23 +9,29 @@
         android:id="@+id/bubbleSpeech"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:maxWidth="220dp"
+        android:maxWidth="230dp"
         android:text=""
-        android:textColor="#ECECEC"
+        android:textColor="#E0F7FF"
         android:textSize="13sp"
-        android:padding="10dp"
+        android:padding="11dp"
         android:background="@drawable/speech_bg"
         android:visibility="gone"
-        android:layout_marginBottom="6dp"
-        android:layout_marginEnd="4dp" />
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="6dp" />
 
-    <TextView
-        android:id="@+id/bubbleFace"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:text="🤖"
-        android:textSize="40sp"
-        android:gravity="center"
-        android:background="@drawable/bubble_bg" />
+    <FrameLayout
+        android:layout_width="76dp"
+        android:layout_height="76dp">
+
+        <TextView
+            android:id="@+id/bubbleFace"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:text="🤖"
+            android:textSize="36sp"
+            android:gravity="center"
+            android:background="@drawable/orb_glow" />
+
+    </FrameLayout>
 
 </LinearLayout>

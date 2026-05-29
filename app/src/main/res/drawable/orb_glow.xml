@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer glow halo -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="60%"
+                android:startColor="#5500F0FF"
+                android:centerColor="#3300F0FF"
+                android:endColor="#0000F0FF" />
+        </shape>
+    </item>
+    <!-- Inner orb with cyan->purple gradient -->
+    <item android:left="8dp" android:top="8dp" android:right="8dp" android:bottom="8dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="70%"
+                android:startColor="#00F0FF"
+                android:centerColor="#7B2FFF"
+                android:endColor="#0A0E1A" />
+            <stroke android:width="2dp" android:color="#00F0FF" />
+        </shape>
+    </item>
+</layer-list>
