@@ -19,9 +19,6 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var prefs: android.content.SharedPreferences
-    private var selectedEmoji = "🤖"
-    private lateinit var emojiViews: List<TextView>
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -36,22 +33,11 @@ class MainActivity : AppCompatActivity() {
         nameInput.setText(prefs.getString("user_name", ""))
         keyInput.setText(prefs.getString("groq_key", ""))
         aiNameInput.setText(prefs.getString("ai_name", "Aura"))
-        selectedEmoji = prefs.getString("bubble_emoji", "🤖") ?: "🤖"
         headerName.text = prefs.getString("ai_name", "Aura")
 
-        // Emoji picker
-        emojiViews = listOf(
-            findViewById(R.id.emoji1), findViewById(R.id.emoji2),
-            findViewById(R.id.emoji3), findViewById(R.id.emoji4),
-            findViewById(R.id.emoji5)
-        )
-        emojiViews.forEach { v ->
-            v.setOnClickListener {
-                selectedEmoji = v.text.toString()
-                refreshEmojiSelection()
-            }
+        findViewById<Button>(R.id.customizeBtn).setOnClickListener {
+            startActivity(Intent(this, CustomizeActivity::class.java))
         }
-        refreshEmojiSelection()
 
         // Live update header as you type the AI name
         aiNameInput.setOnFocusChangeListener { _, _ ->
@@ -103,21 +89,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshEmojiSelection() {
-        emojiViews.forEach { v ->
-            v.setBackgroundResource(
-                if (v.text.toString() == selectedEmoji) R.drawable.emoji_selected
-                else R.drawable.emoji_unselected
-            )
-        }
-    }
-
     private fun saveAll(name: EditText, aiName: EditText, key: EditText) {
         prefs.edit()
             .putString("user_name", name.text.toString().trim())
             .putString("groq_key", key.text.toString().trim())
             .putString("ai_name", aiName.text.toString().trim().ifEmpty { "Aura" })
-            .putString("bubble_emoji", selectedEmoji)
             .apply()
     }
 

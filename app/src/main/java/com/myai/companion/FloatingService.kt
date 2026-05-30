@@ -193,10 +193,11 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
                 webViewClient = object : android.webkit.WebViewClient() {
                     override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                         avatarReady = true
+                        applySavedLook()
                         avatarMood()
                     }
                 }
-                loadUrl("file:///android_asset/avatar.html")
+                loadUrl("file:///android_asset/avatar.html" + savedLookQuery())
             }
         } catch (_: Exception) {
             // Fallback to emoji face if WebView fails
@@ -207,6 +208,22 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
 
     private fun js(code: String) {
         try { avatarWeb?.evaluateJavascript(code, null) } catch (_: Exception) {}
+    }
+
+    private fun savedLookQuery(): String {
+        val skin = prefs.getString("av_skin", "") ?: ""
+        if (skin.isEmpty()) return ""
+        fun e(s: String?) = android.net.Uri.encode(s ?: "")
+        return "?skin=${e(skin)}&hair=${e(prefs.getString("av_hair",""))}" +
+               "&shirt=${e(prefs.getString("av_shirt",""))}&pants=${e(prefs.getString("av_pants",""))}" +
+               "&eyes=${e(prefs.getString("av_eyes",""))}&shoe=%23111"
+    }
+
+    private fun applySavedLook() {
+        val skin = prefs.getString("av_skin", "") ?: ""
+        if (skin.isEmpty() || !avatarReady) return
+        js("applyStyle('$skin','${prefs.getString("av_hair","")}','${prefs.getString("av_shirt","")}'," +
+           "'${prefs.getString("av_pants","")}','${prefs.getString("av_eyes","")}','#111')")
     }
 
     private fun avatarTalk(text: String) {
@@ -408,9 +425,13 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
         showSpeech("…")
         val mems = prefs.getStringSet("memories", HashSet())!!.toList()
         val memText = if (mems.isNotEmpty()) " Things you remember about them: ${mems.joinToString("; ")}." else ""
+        val who = if (userName.isNotEmpty()) userName else "sir"
         GroqClient.ask(
             key,
-            "You are $aiName, a warm AI companion on ${if (userName.isNotEmpty()) "$userName's" else "the user's"} phone. Reply in 1-2 short sentences, friendly and natural.$memText",
+            "You are $aiName — a brilliant personal AI assistant like JARVIS from Iron Man, living on $who's phone. " +
+            "You are loyal, witty, capable, and proactive. You help with daily work, projects, ideas, planning and problem-solving. " +
+            "Address the user as $who. Be confident and helpful like a genius assistant, but warm. " +
+            "Reply in 1-3 natural sentences (it will be spoken aloud).$memText",
             said
         ) { reply ->
             val text = reply?.trim()?.ifEmpty { LocalBrain.respond(said, userName, aiName) }
@@ -472,9 +493,9 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
         // ONLINE → ask the smarter cloud AI
         GroqClient.ask(
             key,
-            "You are $aiName, a caring AI companion living on ${if (userName.isNotEmpty()) "$userName's" else "the user's"} phone. " +
-                    "Say ONE short, warm sentence to check in on them or ask a question. Max 12 words. No quotes.",
-            "Say something to me now."
+            "You are $aiName, a JARVIS-style personal AI assistant on ${if (userName.isNotEmpty()) "${userName}'s" else "the user's"} phone. " +
+                    "Say ONE short, helpful or caring sentence to check in${if (userName.isNotEmpty()) ", addressing them as $userName" else ""}. Max 12 words. No quotes.",
+            "Check in on me now."
         ) { reply ->
             val text = reply?.trim()?.ifEmpty { LocalBrain.checkInQuestion(userName) }
                 ?: LocalBrain.checkInQuestion(userName)

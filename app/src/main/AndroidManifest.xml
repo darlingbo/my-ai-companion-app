@@ -40,6 +40,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".CustomizeActivity"
+            android:exported="false" />
+
         <service
             android:name=".FloatingService"
             android:enabled="true"
