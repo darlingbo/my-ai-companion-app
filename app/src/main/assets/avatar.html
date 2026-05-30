@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;width:100%;height:100%;}
+  #wrap{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;}
+  #aura{
+    position:relative;width:88vw;height:88vw;max-width:120px;max-height:120px;
+    border-radius:50%;
+    background:radial-gradient(circle at 50% 40%, #14264a 0%, #0a0e1a 70%);
+    box-shadow:0 0 26px 6px rgba(0,240,255,.55), inset 0 0 22px rgba(123,47,255,.5);
+    border:2px solid #00f0ff;
+    transition:box-shadow .5s, border-color .5s;
+    animation:bob 3s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+  /* face container */
+  #face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;}
+
+  /* eyes */
+  #eyes{display:flex;gap:20px;align-items:center;}
+  .eye{
+    width:16px;height:16px;border-radius:50%;
+    background:#00f0ff;box-shadow:0 0 12px #00f0ff;
+    transition:height .12s, background .4s, box-shadow .4s;
+  }
+  .eye.blink{height:2px;}
+
+  /* mouth */
+  #mouth{
+    width:26px;height:6px;border-radius:0 0 14px 14px;
+    background:#00f0ff;box-shadow:0 0 10px #00f0ff;
+    transition:height .09s,width .12s,border-radius .2s,background .4s;
+  }
+  #mouth.talk{height:16px;border-radius:14px;}
+  #mouth.smile{height:9px;width:30px;border-radius:0 0 16px 16px;}
+  #mouth.sad{height:9px;width:24px;border-radius:16px 16px 0 0;transform:translateY(5px);}
+  #mouth.o{height:18px;width:18px;border-radius:50%;}
+
+  /* orbit ring */
+  #ring{
+    position:absolute;inset:-10px;border-radius:50%;
+    border:2px dashed rgba(123,47,255,.7);
+    animation:spin 7s linear infinite;
+  }
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+  /* mood color themes via classes on #aura */
+  .m-excited{box-shadow:0 0 30px 8px rgba(255,200,0,.7), inset 0 0 22px rgba(255,140,0,.5)!important;border-color:#ffce00!important;}
+  .m-excited .eye,.m-excited #mouth{background:#ffce00!important;box-shadow:0 0 12px #ffce00!important;}
+  .m-lonely{box-shadow:0 0 22px 5px rgba(60,120,255,.6), inset 0 0 20px rgba(40,70,160,.5)!important;border-color:#5a8cff!important;}
+  .m-lonely .eye,.m-lonely #mouth{background:#5a8cff!important;box-shadow:0 0 10px #5a8cff!important;}
+  .m-sleepy{box-shadow:0 0 16px 4px rgba(123,47,255,.5)!important;border-color:#7b2fff!important;opacity:.8;}
+  .m-sleepy .eye,.m-sleepy #mouth{background:#7b2fff!important;box-shadow:0 0 8px #7b2fff!important;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="aura">
+    <div id="ring"></div>
+    <div id="face">
+      <div id="eyes"><div class="eye" id="le"></div><div class="eye" id="re"></div></div>
+      <div id="mouth"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var aura=document.getElementById('aura');
+  var le=document.getElementById('le'), re=document.getElementById('re');
+  var mouth=document.getElementById('mouth');
+  var talking=false, talkTimer=null;
+
+  // Natural blinking
+  function blink(){
+    le.classList.add('blink'); re.classList.add('blink');
+    setTimeout(function(){le.classList.remove('blink');re.classList.remove('blink');},140);
+  }
+  setInterval(function(){ if(Math.random()<0.8) blink(); }, 3200);
+
+  // Talking — mouth flaps while speaking
+  window.talk=function(ms){
+    talking=true;
+    if(talkTimer)clearInterval(talkTimer);
+    talkTimer=setInterval(function(){
+      mouth.classList.toggle('talk');
+    },140);
+    setTimeout(function(){
+      clearInterval(talkTimer); talking=false; mouth.classList.remove('talk');
+    }, ms||3000);
+  };
+
+  // Expressions
+  window.setExpression=function(e){
+    mouth.className='';
+    if(e==='happy'){mouth.classList.add('smile');}
+    else if(e==='sad'){mouth.classList.add('sad');}
+    else if(e==='surprised'){mouth.classList.add('o');}
+    else if(e==='sleepy'){le.classList.add('blink');re.classList.add('blink');}
+    else { le.classList.remove('blink'); re.classList.remove('blink'); }
+  };
+
+  // Mood color
+  window.setMood=function(m){
+    aura.className='';
+    if(m==='excited')aura.classList.add('m-excited');
+    else if(m==='lonely')aura.classList.add('m-lonely');
+    else if(m==='sleepy')aura.classList.add('m-sleepy');
+  };
+</script>
+</body>
+</html>

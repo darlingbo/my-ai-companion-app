@@ -90,13 +90,11 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
         // Flip face-down → sleep; face-up → wake
         if (z < -8.5f && !isSleeping) {
             isSleeping = true
-            val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
-            face.text = "😴"
+            js("setExpression('sleepy')"); js("setMood('sleepy')")
             showSpeech("Going to sleep… 😴 zzz")
         } else if (z > 8.5f && isSleeping) {
             isSleeping = false
-            val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
-            face.text = bubbleEmoji()
+            js("setExpression('happy')"); avatarMood()
             showSpeech("I'm awake! 😊")
         }
 
@@ -115,8 +113,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
     override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
 
     private fun onShaken() {
-        val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
-        face.text = "😵"
+        js("setExpression('surprised')")
         val msgs = listOf("Whoa! Stop shaking me! 😵", "Wheee! That's dizzy! 🌀", "Haha, easy there! 😆")
         val m = msgs.random()
         showSpeech(m); speak(m)
@@ -125,7 +122,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 v.vibrate(android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
         } catch (_: Exception) {}
-        handler.postDelayed({ face.text = bubbleEmoji() }, 2500)
+        handler.postDelayed({ js("setExpression('happy')") }, 2500)
         EmotionEngine.recordInteraction(prefs, 1)
     }
 
@@ -175,13 +172,57 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
         params.y = screenH / 2
 
         windowManager.addView(bubbleView, params)
+        setupAvatar()
         setupTouch()
-
-        val faceView = bubbleView.findViewById<TextView>(R.id.bubbleFace)
-        faceView.text = bubbleEmoji()
-        startPulse(faceView)
-        startOrbit(bubbleView.findViewById(R.id.orbitRing))
         showSpeech(greeting())
+    }
+
+    // ── Animated character (WebView) ──
+    private var avatarWeb: android.webkit.WebView? = null
+    private var avatarReady = false
+
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun setupAvatar() {
+        try {
+            avatarWeb = bubbleView.findViewById(R.id.avatarWeb)
+            avatarWeb?.apply {
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                settings.javaScriptEnabled = true
+                isVerticalScrollBarEnabled = false
+                isHorizontalScrollBarEnabled = false
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                        avatarReady = true
+                        avatarMood()
+                    }
+                }
+                loadUrl("file:///android_asset/avatar.html")
+            }
+        } catch (_: Exception) {
+            // Fallback to emoji face if WebView fails
+            val f = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+            f.visibility = View.VISIBLE; f.text = bubbleEmoji()
+        }
+    }
+
+    private fun js(code: String) {
+        try { avatarWeb?.evaluateJavascript(code, null) } catch (_: Exception) {}
+    }
+
+    private fun avatarTalk(text: String) {
+        val ms = (text.length * 60).coerceIn(900, 6000)
+        if (avatarReady) js("talk($ms)")
+    }
+
+    private fun avatarMood() {
+        if (!avatarReady) return
+        val m = when (EmotionEngine.mood(prefs)) {
+            EmotionEngine.Mood.EXCITED -> "excited"
+            EmotionEngine.Mood.LONELY -> "lonely"
+            EmotionEngine.Mood.SLEEPY -> "sleepy"
+            else -> "normal"
+        }
+        js("setMood('$m')")
     }
 
     private var lastX = 0
@@ -191,7 +232,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
     private var isDragging = false
 
     private fun setupTouch() {
-        val face = bubbleView.findViewById<TextView>(R.id.bubbleFace)
+        val face = bubbleView.findViewById<View>(R.id.touchLayer)
         face.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -491,6 +532,7 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
     }
 
     private fun speak(text: String) {
+        avatarTalk(text)
         if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "id1")
     }
 
