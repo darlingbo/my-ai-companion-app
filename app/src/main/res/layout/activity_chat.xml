@@ -28,8 +28,36 @@
             android:layout_height="wrap_content"
             android:text="● online"
             android:textColor="#10A37F"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp" />
+        <Button
+            android:id="@+id/muteBtn"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="🔊"
+            android:background="@drawable/card_bg" />
+        <Button
+            android:id="@+id/clearBtn"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="🗑️"
+            android:background="@drawable/card_bg"
+            android:layout_marginStart="6dp" />
     </LinearLayout>
+
+    <!-- Suggestion chips -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+        <LinearLayout
+            android:id="@+id/chips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
 
     <!-- Messages -->
     <ScrollView
