@@ -322,11 +322,9 @@ class FloatingService : Service(), TextToSpeech.OnInitListener, android.hardware
     }
 
     private fun openWebChat() {
-        showSpeech("Opening full chat…")
+        showSpeech("Opening our chat…")
         try {
-            val url = prefs.getString("chat_url",
-                "https://my-ai-assistant-ltwrdkacjgc59epbteifua.streamlit.app")
-            val i = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            val i = Intent(this, ChatActivity::class.java)
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(i)
         } catch (_: Exception) {}

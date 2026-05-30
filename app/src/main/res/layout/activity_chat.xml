@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/space_bg">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="14dp">
+        <TextView
+            android:id="@+id/chatTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🤖 Aura"
+            android:textColor="#00F0FF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+        <TextView
+            android:id="@+id/chatStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="● online"
+            android:textColor="#10A37F"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Messages -->
+    <ScrollView
+        android:id="@+id/chatScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="10dp">
+        <LinearLayout
+            android:id="@+id/messages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <!-- Input row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:gravity="center_vertical">
+        <EditText
+            android:id="@+id/chatInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Message, or 'draw a cat'…"
+            android:textColor="#E0F7FF"
+            android:textColorHint="#4A5070"
+            android:backgroundTint="#00F0FF"
+            android:maxLines="4"
+            android:inputType="textCapSentences|textMultiLine" />
+        <Button
+            android:id="@+id/micBtn"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="🎤"
+            android:background="@drawable/card_bg"
+            android:layout_marginStart="6dp" />
+        <Button
+            android:id="@+id/sendBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="➤"
+            android:textSize="18sp"
+            android:background="@drawable/neon_button"
+            android:textColor="#0A0E1A"
+            android:layout_marginStart="6dp" />
+    </LinearLayout>
+
+</LinearLayout>

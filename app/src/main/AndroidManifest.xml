@@ -44,6 +44,10 @@
             android:name=".CustomizeActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false" />
+
         <service
             android:name=".FloatingService"
             android:enabled="true"

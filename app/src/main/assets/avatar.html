@@ -8,10 +8,17 @@
   :root{
     --skin:#f1c27d; --hair:#2a1a0a; --shirt:#00f0ff; --pants:#22305a; --eyes:#1a1a1a; --shoe:#111;
   }
-  #stage{width:100vw;height:100vh;display:flex;align-items:flex-end;justify-content:center;}
+  #stage{width:100vw;height:100vh;display:flex;align-items:flex-end;justify-content:center;position:relative;}
+  /* floating sparkles */
+  .spark{position:absolute;width:5px;height:5px;border-radius:50%;background:#00f0ff;
+    box-shadow:0 0 8px #00f0ff;opacity:.7;animation:float 4s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:translateY(0);opacity:.2}50%{transform:translateY(-22px);opacity:.9}}
+  /* soft shadow under feet */
+  #shadow{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+    width:70px;height:12px;border-radius:50%;background:rgba(0,240,255,.25);filter:blur(4px);}
   #char{
     position:relative;width:120px;height:200px;transform-origin:bottom center;
-    animation:idle 3s ease-in-out infinite;
+    animation:idle 3s ease-in-out infinite;z-index:2;
   }
   @keyframes idle{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(.5deg)}}
   #char.walk{animation:walkbob .5s ease-in-out infinite;}
@@ -65,6 +72,12 @@
 </head>
 <body>
 <div id="stage">
+  <span class="spark" style="left:18%;bottom:40%;animation-delay:0s"></span>
+  <span class="spark" style="left:78%;bottom:55%;animation-delay:1s"></span>
+  <span class="spark" style="left:30%;bottom:70%;animation-delay:2s"></span>
+  <span class="spark" style="left:68%;bottom:30%;animation-delay:1.5s;background:#7b2fff;box-shadow:0 0 8px #7b2fff"></span>
+  <span class="spark" style="left:50%;bottom:80%;animation-delay:2.5s;background:#ff2ef7;box-shadow:0 0 8px #ff2ef7"></span>
+  <div id="shadow"></div>
   <div id="char">
     <div id="aura"></div>
     <div class="part" id="legL"><div class="shoe"></div></div>

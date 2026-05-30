@@ -141,11 +141,17 @@ object LocalBrain {
             "You are capable of amazing things$name. ✨",
             "Believe in yourself$name — I do! 💙",
             "Every small step counts$name. Keep going! 🚀",
-            "You matter$name, and you're doing your best.",
-            "Take a deep breath$name. You've got this.",
-            "Remember to take a break$name! 😊",
             "You're stronger than you think$name. 💪",
-            "Proud of you$name, just for showing up today. 🌟"
+            "Proud of you$name, just for showing up today. 🌟",
+            // tips
+            "Tip$name: tackle your hardest task first. 🎯",
+            "Tip$name: a 5-minute tidy clears the mind. 🧹",
+            "Tip$name: drink water — your brain loves it. 💧",
+            "Tip$name: write tomorrow's top 3 tasks tonight. 📝",
+            // fun facts
+            "Fun fact$name: octopuses have three hearts! 🐙",
+            "Fun fact$name: honey never spoils. 🍯",
+            "Fun fact$name: a day on Venus is longer than its year! 🪐"
         ).random()
     }
 
